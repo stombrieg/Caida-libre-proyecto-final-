@@ -1,0 +1,183 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Simulación interactiva de caída libre</title>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<style>
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+h1 {
+    color: #003366;
+}
+.panel {
+    border: 1px solid #cccccc;
+    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 20px;
+}
+label {
+    display: inline-block;
+    width: 180px;
+}
+input[type=range] {
+    width: 260px;
+}
+.value-span {
+    display: inline-block;
+    min-width: 80px;
+}
+.graph-container {
+    margin-top: 25px;
+}
+</style>
+</head>
+<body>
+
+<h1>Caída libre interactiva</h1>
+
+<p>
+Esta simulación muestra el movimiento de un objeto en caída libre vertical
+(sin rozamiento), usando el modelo:
+<code>y(t) = h₀ - (1/2) g t²</code> y <code>v(t) = -g t</code>.
+<br>
+Puedes cambiar la altura inicial y la gravedad y ver cómo cambian las gráficas.
+</p>
+
+<div class="panel">
+  <h2>Parámetros</h2>
+
+  <div>
+    <label for="h0Range">Altura inicial h₀ (m):</label>
+    <input type="range" id="h0Range" min="1" max="100" step="1" value="57.0">
+    <span class="value-span" id="h0Value"></span>
+  </div>
+
+  <div>
+    <label for="gRange">Gravedad g (m/s²):</label>
+    <input type="range" id="gRange" min="5" max="15" step="0.1" value="9.8">
+    <span class="value-span" id="gValue"></span>
+  </div>
+
+  <h3>Magnitudes calculadas</h3>
+  <p>Tiempo total de caída: <span id="tTotal"></span> s</p>
+  <p>Velocidad de impacto: <span id="vImpacto"></span> m/s (negativa = hacia abajo)</p>
+</div>
+
+<div class="graph-container">
+  <h2>Altura y(t) vs tiempo</h2>
+  <div id="alturaPlot" style="width: 100%; max-width: 800px; height: 400px;"></div>
+</div>
+
+<div class="graph-container">
+  <h2>Velocidad v(t) vs tiempo</h2>
+  <div id="velocidadPlot" style="width: 100%; max-width: 800px; height: 400px;"></div>
+</div>
+
+<hr>
+<p>
+Recuerda que el sistema de referencia usado es: eje y vertical, origen en el suelo (y = 0),
+dirección positiva hacia arriba, y el objeto se suelta sin velocidad inicial desde y = h₀.
+</p>
+
+<script>
+// Parámetros iniciales enviados desde Python
+let h0 = 57.0;
+let g  = 9.8;
+
+const h0Range   = document.getElementById('h0Range');
+const gRange    = document.getElementById('gRange');
+const h0Value   = document.getElementById('h0Value');
+const gValue    = document.getElementById('gValue');
+const tTotalSpan   = document.getElementById('tTotal');
+const vImpactoSpan = document.getElementById('vImpacto');
+
+// Actualizar etiquetas de sliders
+function updateLabels() {
+    h0Value.textContent = h0.toFixed(1) + " m";
+    gValue.textContent  = g.toFixed(2) + " m/s²";
+}
+
+// Calcular datos de la caída libre
+function calculateData(h0, g, n=200) {
+    // Tiempo total hasta que llega al suelo: y = 0
+    const tTotal = Math.sqrt(2 * h0 / g);
+    let t = [];
+    let y = [];
+    let v = [];
+    for (let i = 0; i <= n; i++) {
+        let ti = tTotal * i / n;
+        let yi = h0 - 0.5 * g * ti * ti;
+        let vi = -g * ti;
+        t.push(ti);
+        y.push(yi);
+        v.push(vi);
+    }
+    return { t, y, v, tTotal };
+}
+
+// Dibujar / actualizar las gráficas
+function updatePlots() {
+    const data = calculateData(h0, g, 300);
+    const t = data.t;
+    const y = data.y;
+    const v = data.v;
+    const tTotal = data.tTotal;
+    const vImpact = v[v.length - 1];
+
+    tTotalSpan.textContent   = tTotal.toFixed(3);
+    vImpactoSpan.textContent = vImpact.toFixed(3);
+
+    const alturaTrace = {
+        x: t,
+        y: y,
+        mode: 'lines',
+        name: 'Altura y(t)'
+    };
+
+    const velocidadTrace = {
+        x: t,
+        y: v,
+        mode: 'lines',
+        name: 'Velocidad v(t)'
+    };
+
+    const alturaLayout = {
+        xaxis: { title: 'Tiempo (s)' },
+        yaxis: { title: 'Altura y (m)' },
+        margin: { t: 30, r: 10, l: 60, b: 50 }
+    };
+
+    const velLayout = {
+        xaxis: { title: 'Tiempo (s)' },
+        yaxis: { title: 'Velocidad v (m/s)' },
+        margin: { t: 30, r: 10, l: 60, b: 50 }
+    };
+
+    Plotly.newPlot('alturaPlot', [alturaTrace], alturaLayout);
+    Plotly.newPlot('velocidadPlot', [velocidadTrace], velLayout);
+}
+
+// Eventos de los sliders
+h0Range.addEventListener('input', function() {
+    h0 = parseFloat(this.value);
+    updateLabels();
+    updatePlots();
+});
+
+gRange.addEventListener('input', function() {
+    g = parseFloat(this.value);
+    updateLabels();
+    updatePlots();
+});
+
+// Inicializar
+updateLabels();
+updatePlots();
+</script>
+
+</body>
+</html>
